@@ -11,16 +11,10 @@ public class User implements UserInterface {
     private final int userId;
     private final String name;
     private final String surname;
-    private int balance;
+    private double balance;
+    private Map<Integer, Product> productMap = new HashMap<>();
 
-    private List<Product> productList = new ArrayList<>();
-/*    private Map<Integer, Product> productMap = new HashMap<>();*/
-
-
-
-    public User(String name, String surname, int balance) {
-/*        Objects.requireNonNull(name);
-        Objects.requireNonNull(surname, "null object");*/
+    public User(String name, String surname, double balance) {
         userId = count.incrementAndGet();
         this.name = name;
         this.surname = surname;
@@ -40,28 +34,20 @@ public class User implements UserInterface {
         return surname;
     }
 
-    public String userProdacts(){
-        System.out.println(String.format(
-                "%4s | %10s %s", "id" , "name", "price"));
-        productList.stream().map(product1 -> String.format(
-                "%4d | %10s %d",
+    public double getBalance() {
+        return balance;
+    }
+    public void userProducts(){
+        productMap.values().stream().map(product1 -> String.format(
+                "%4d | %10s %.2f",
                 product1.getProductId(),
                 product1.getName(),
                 product1.getPrice()
         )).forEach(java.lang.System.out::println);
-        return String.valueOf(productList);
     }
 
-    public void deleteProductsById(int productId){
-        Iterator itr = productList.iterator();
-
-        while (itr.hasNext()) {
-
-            Product x = (Product) itr.next();
-            if (x.getProductId()==productId)
-                itr.remove();
-        }
-        //productList.removeIf(product -> product.getProductId() == productId);
+    public void deleteProductById(int productId){
+        productMap.remove(productId);
     }
 
     public void buyProduct(Product product) throws NotEnoughMoney {
@@ -69,19 +55,12 @@ public class User implements UserInterface {
         if(balance<product.getPrice()) {
             throw new NotEnoughMoney("Not enough money\nproduct will not be added");
         }else {
-            int price = product.getPrice();
+            double price = product.getPrice();
             balance = balance - price;
-            productList.add(product);
+            productMap.put(product.getProductId(), product);
         }
     }
-
-
-    public int getBalance() {
-        return balance;
-    }
     public String toString(){
-
         return userId + " " + name + " " + balance;
     }
-
 }

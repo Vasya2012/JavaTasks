@@ -1,20 +1,14 @@
 package marketplace.menu;
 
-import marketplace.marketplaceException.NotEnoughMoney;
+import marketplace.services.ShopController;
 import marketplace.shop.Product;
 import marketplace.shop.User;
 
 import java.util.*;
 
-/**toDo1
- * need create UserMenu, ProductMenu and use them for better readable code
- * need create UserServise or UserController and Product and use them for better readable code
- * Dont have enough time, because i lost my time on task3 which i didnt end
- * */
 public class StartMenu {
+    ShopController shopController = new ShopController();
     public static final Scanner scanner = new Scanner(System.in);
-    List<User> userList = new ArrayList<>();
-    List<Product> productList = new ArrayList<>();
     private int choise = 0;
 
     public StartMenu(){
@@ -67,44 +61,44 @@ public class StartMenu {
                     exitApp();
                     scanner.close();
                     return;
-
-                default:
-                    System.out.println("Smth wrong");
             }
         }
     }
 
     public int choise() {
-        System.out.println("start menu");
+        System.out.println("----------------------------\nstart menu\nwrite your choice: ");
         try {
-            choise = scanner.nextInt();
-            scanner.nextLine();
+            choise = Integer.parseInt(scanner.nextLine());
         } catch (NumberFormatException e) {
             System.out.println("ERROR: Incorect choise");
         }catch (InputMismatchException e){
-            scanner.next();
-            System.out.println("ERROR: Write digit from 1 to 9, and 0 for EXIT");
+            System.out.println("ERROR: Write digit from 1 to 9, and 10 for EXIT");
         }
         return choise;
     }
 
     public void userCreate() {
         System.out.println("User creating menu \nwrite 3 words separated by space. Example: 'name surname balance' ");
+        System.out.println(String.format(
+                "%4s | %10s %10s %s", "id" , "name", "surname", "balance"));
         if (scanner.hasNext()) {
             try {
                 String[] inputLine = scanner.nextLine().split("\\s+");
                 String name = inputLine[0];
                 String surname = inputLine[1];
-                int balance = Integer.parseInt(inputLine[2]);
+                double balance = Double.parseDouble(inputLine[2]);
                 if (balance < 0) {
                     System.out.println("user has not been added. Balance must be greater than 0\nTry again with correct balance");
-                    return;
+                    userCreate();
                 }
-                userList.add(new User(name, surname, balance));
+                shopController.userAdd(new User(name, surname, balance));
                 System.out.println("user added");
             }catch (ArrayIndexOutOfBoundsException e){
                 System.out.println("wrong parameters: u must write 3 words separated by space");
-                return;
+                userCreate();
+            }catch (NumberFormatException e1){
+                System.out.println(e1.getMessage() + " balance must be a positive number");
+                userCreate();
             }
         }
     }
@@ -117,15 +111,20 @@ public class StartMenu {
         try {
             String[] inputLine = scanner.nextLine().split("\\s+");
             String nameProduct = inputLine[0];
-            int cost = Integer.parseInt(inputLine[1]);
-            productList.add(new Product(nameProduct, cost));
+            double cost = Double.parseDouble(inputLine[1]);
+            if (cost < 0) {
+                System.out.println("The product must have a positive price");
+                productCreate();
+                return;
+            }
+            shopController.productAdd(new Product(nameProduct, cost));
             System.out.println("product added");
         }catch (NumberFormatException e){
-            System.out.println("Wrong price: must be integer\nGo to start menu");
-            return;
+            System.out.println("Wrong price: must be a number");
+            productCreate();
         }catch (IndexOutOfBoundsException e2){
             System.out.println("Wrong");
-            return;
+            productCreate();
         }
     }
 
@@ -135,25 +134,13 @@ public class StartMenu {
             String[] inputLine = scanner.nextLine().split("\\s+");
             int userId1 = Integer.parseInt(inputLine[0]);
             int productId1 = Integer.parseInt(inputLine[1]);
-            for (User user : userList) {
-                if (user.getUserId() == userId1) {
-                    for (Product product1 : productList) {
-                        if (product1.getProductId() == productId1) {
-                            product1.addUser(user);
-                            user.buyProduct(product1);
-                        }
-                    }
-                }else {
-                    System.out.println("Id not found");
-                }
-            }
-        } catch (NotEnoughMoney e) {
-            System.out.println(e.getMessage() + "\nYou are redirected to the start menu");
+            shopController.userBuy(userId1,productId1);
         } catch (NumberFormatException e2) {
             System.out.println(e2.getMessage() + "\nIncorect input\nWrite [id, id], where id is number");
+            userBuy();
         } catch (IndexOutOfBoundsException e1) {
             System.out.println("Incorrect ID");
-        } finally {
+            userBuy();
         }
     }
 
@@ -161,107 +148,66 @@ public class StartMenu {
         System.out.println("List of all users");
         System.out.println(String.format(
                 "%4s | %10s %10s %s", "id" , "name", "surname", "balance"));
-        userList.stream().map(user -> String.format(
-                        "%4d | %10s %10s %d",
-                        user.getUserId(),
-                        user.getName(),
-                        user.getSurname(),
-                        user.getBalance()
-                ))
-                .forEach(System.out::println);
+        shopController.showAllUsers();
     }
 
     public void showAllProducts() {
         System.out.println("List of products");
         System.out.println(String.format(
                 "%4s | %10s %s", "id" , "name", "price"));
-        productList.stream().map(product1 -> String.format(
-                "%4d | %10s %d",
-                product1.getProductId(),
-                product1.getName(),
-                product1.getPrice()
-        )).forEach(System.out::println);
+        shopController.showAllProducts();
     }
+
     public void deleteUser() {
         System.out.println("Delete user by id");
         try {
-            int userId = scanner.nextInt();
-            scanner.nextLine();
+            int userId = Integer.parseInt(scanner.nextLine());
+            shopController.deleteUserById(userId);
             System.out.println("user has been deleted");
-            for(User user: userList){
-                if(user.getUserId()==userId){
-                    for(Product product: productList){
-                        product.deleteUsersById(userId);
-                    }
-                }
-            }
-            userList.removeIf(user -> user.getUserId() == userId);
-        }catch (NumberFormatException e){
-            System.out.println(e + "Incorrect id");
-            return;
+        }catch (NumberFormatException e2) {
+            System.out.println(e2.getMessage() + "\nIncorect input\nWrite [id, id], where id is number");
+        }catch (IndexOutOfBoundsException e1) {
+            System.out.println("Incorrect ID");
         }
     }
 
     public void deleteProduct() {
         System.out.println("Delete product by id");
         try {
-            int productId = scanner.nextInt();
-            scanner.nextLine();
-            for (Product product : productList) {
-                if (product.getProductId() == productId) {
-                    for (User user : userList) {
-                        user.deleteProductsById(product.getProductId());
-                    }
-                }
-            }
-            productList.removeIf(product1 -> product1.getProductId() == productId);
-        }catch (NumberFormatException e){
-            System.out.println(e + "Incorrect id");
-            return;
+            int productId = Integer.parseInt(scanner.nextLine());
+            shopController.deleteProductById(productId);
+        }catch (NumberFormatException e2) {
+            System.out.println(e2.getMessage() + "\nIncorect input\nWrite [id, id], where id is number");
+        }catch (IndexOutOfBoundsException e1) {
+            System.out.println("Incorrect ID");
         }
         System.out.println("Product has been deleted");
     }
     public void showUserProducts() {
         System.out.println("Display user products by user id");
         try {
-            int userId = scanner.nextInt();
-            scanner.nextLine();
-            for (User user : userList) {
-                if (user.getUserId() == userId) {
-                    user.userProdacts();
-                }
-            }
+            int userId = Integer.parseInt(scanner.nextLine());
+            shopController.showUserProducts(userId);
         } catch (IndexOutOfBoundsException e) {
             System.out.println("Incorrect id, not found user\n" + e.getMessage());
-            return;
         } catch (NumberFormatException e1) {
-            System.out.println("Incorrect number");
-            return;
+            System.out.println(e1.getMessage() + " Incorrect number");
         }
     }
 
     public void showProductUsers() {
         System.out.println("Display list of users that bought product by product id");
         try {
-            int productIdFind = scanner.nextInt();
-            scanner.nextLine();
+            int id = Integer.parseInt(scanner.nextLine());
             System.out.println("List of users");
-            System.out.println(String.format(
-                    "%4s | %10s %10s %s", "id", "name", "surname", "balance"));
-            for (Product product : productList) {
-                if (product.getProductId() == productIdFind) {
-                    product.productUsers();
-                }
-            }
+            shopController.showProductUsers(id);
         } catch (NumberFormatException e) {
             System.out.println(e + "Incorrect id");
-            return;
         }
     }
 
     public void exitApp() {
         System.out.println("Exit");
-        return;
     }
 }
 
